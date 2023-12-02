@@ -179,6 +179,50 @@ class UserManagerController {
       const token = authorization.split(" ")[1];
       const currentUserId = await authMethod.getUserIdFromJwt(token);
 
+      const profile = await Profile.findOne({ user: currentUserId });
+      const avatarOld = profile.avatar;
+      console.log("avatarOld", avatarOld);
+
+      let photoURL = null;
+      if (req.files && req.files.length > 0) {
+        // let photoURL = null;
+
+        for (const file of req.files) {
+          if (file.fieldname === "imageFile") {
+            photoURL = await Cloudinary.uploadPhotosToCloudinary(file.buffer);
+            break;
+          }
+        }
+      }
+
+      //   if (photoURL && avatarOld !== photoURL && avatarOld) {
+      //     // Delete the old avatar from Cloudinary
+      //     await Cloudinary.deletePhotoFromCloudinary(avatarOld);
+      //   }
+
+      const profileUpdate = await Profile.findOneAndUpdate(
+        { user: currentUserId },
+        { avatar: photoURL, updatedAt: new Date() },
+        { new: true, runValidators: true }
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: "Upload successful",
+        result: photoURL,
+        statusCode: 200,
+      });
+    } catch (error) {
+      throw new Error("Failed to upload avatar");
+    }
+  }
+
+  async updateBackground(req, res) {
+    const { authorization } = req.headers;
+    try {
+      const token = authorization.split(" ")[1];
+      const currentUserId = await authMethod.getUserIdFromJwt(token);
+
       let photoURL = null;
       if (req.files && req.files.length > 0) {
         // let photoURL = null;
@@ -195,7 +239,7 @@ class UserManagerController {
 
       const profileUpdate = await Profile.findOneAndUpdate(
         { user: currentUserId },
-        { avatar: photoURL, updatedAt: new Date() },
+        { background: photoURL, updatedAt: new Date() },
         { new: true, runValidators: true }
       );
 

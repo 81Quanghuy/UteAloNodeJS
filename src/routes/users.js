@@ -10,4 +10,7 @@ router.put("/update", UserController.updateUserProfile);
 // Cập nhật ảnh đại diện
 router.put("/avatar", UserController.updateAvatar);
 
+// Cập nhật ảnh bìa
+router.put("/background", UserController.updateBackground);
+
 module.exports = router;

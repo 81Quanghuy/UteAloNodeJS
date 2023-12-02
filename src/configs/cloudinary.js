@@ -31,6 +31,37 @@ exports.uploadPhotosToCloudinary = async (photoBuffer) =>
       });
   });
 
+// Xóa ảnh trên Cloudinary
+exports.deletePhotoFromCloudinary = async (imageUrl) => {
+  console.log(imageUrl);
+  const publicId = imageUrl.split("/").pop().split(".")[0]; // Lấy public ID từ URL
+  console.log(publicId);
+  try {
+    console.log("2");
+    const result = await cloudinary.uploader.destroy(publicId);
+    console.log("3");
+    console.log("result", result);
+    if (result.result === "ok") {
+      console.log("Thành công");
+      return true; // Xóa ảnh thành công
+    }
+    throw new Error("Failed to delete photo from Cloudinary");
+  } catch (error) {
+    throw new Error("Failed to delete photo from Cloudinary");
+  }
+};
+
+// Sử dụng hàm để xóa ảnh
+// deletePhotoFromCloudinary(
+//   "https://res.cloudinary.com/ddccjvlbf/image/upload/v1701535786/dtqg5smrn4wuqbxw9jvh.jpg"
+// )
+//   .then((success) => {
+//     console.log("Photo deletion status:", success ? "Success" : "Failed");
+//   })
+//   .catch((error) => {
+//     console.error("Error deleting photo:", error.message);
+//   });
+
 // Hàm tải tệp lên Cloudinary
 exports.uploadFilesToCloudinary = async (fileBuffer) =>
   new Promise((resolve, reject) => {
@@ -48,18 +79,3 @@ exports.uploadFilesToCloudinary = async (fileBuffer) =>
         }
       });
   });
-
-// // Hàm kiểm tra kết nối và tải ảnh lên Cloudinary
-// const testCloudinaryConnection = async () => {
-//   try {
-//     const testImageFilePath = "../../src/1.jpeg"; // Thay đổi đường dẫn tới hình ảnh
-
-//     const imageUrl = await uploadPhotosToCloudinary(testImageFilePath);
-//     console.log("Uploaded image URL:", imageUrl);
-//   } catch (error) {
-//     console.error("Failed to upload image to Cloudinary:", error);
-//   }
-// };
-
-// // Gọi hàm kiểm tra kết nối và tải ảnh lên Cloudinary
-// testCloudinaryConnection();
