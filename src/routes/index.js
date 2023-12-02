@@ -66,6 +66,7 @@ function route(app) {
   app.use("/roles", Role);
   app.use("/api/v1/auth", Auth);
   app.use("/api/v1/admin", Admin);
+  app.use("/api/v1/user", User);
   app.use("/notifications", Notification);
   // app.use('/reports', Report);
   // app.use('/hobbies', Hobby);

@@ -1,14 +1,8 @@
-const multer = require("multer");
 const router = require("express").Router();
 const PostManagerController = require("../app/controllers/Admin/PostManagerController");
 const UserManagerController = require("../app/controllers/Admin/UserManagerController");
 const CommentManagerController = require("../app/controllers/Admin/CommentManagerController");
 const GroupManagerController = require("../app/controllers/Admin/GroupManagerController");
-
-// Khởi tạo Multer và chỉ định nơi lưu trữ tệp
-const storage = multer.memoryStorage(); // hoặc diskStorage để lưu vào ổ cứng
-// eslint-disable-next-line object-shorthand
-const upload = multer({ storage: storage }).single("photos"); // Đặt tên field tương ứng
 
 // Lấy danh sách bài viết trong hệ thống
 router.get("/postManager/list", PostManagerController.getListPosts);
@@ -17,7 +11,7 @@ router.get("/postManager/list", PostManagerController.getListPosts);
 router.put("/postManager/delete/:postId", PostManagerController.deletePost);
 
 // Tạo bài viết trong hệ thống
-router.post("/postManager/create", upload, PostManagerController.createPost);
+router.post("/postManager/create", PostManagerController.createPost);
 
 // Lấy dánh người dùng trong hệ thống
 router.get("/userManager/list", UserManagerController.getListUsers);

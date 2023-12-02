@@ -1,4 +1,7 @@
+/* eslint-disable import/no-extraneous-dependencies */
 const cloudinary = require("cloudinary");
+// eslint-disable-next-line import/no-unresolved
+const sizeOf = require("image-size");
 
 cloudinary.config({
   cloud_name: "ddccjvlbf",
@@ -11,42 +14,47 @@ cloudinary.config({
 // console.log("Cloudinary Configuration:", cloudinary.config().api_secret);
 
 // Hàm tải ảnh lên Cloudinary
-exports.uploadImage = async (imageFile) => {
-  console.log("imageFile", imageFile);
-  try {
-    const result = await cloudinary.uploader.upload(imageFile, {
-      folder: "posts", // Thay đổi theo cấu trúc thư mục của bạn
-      allowed_formats: ["jpg", "jpeg", "png"], // Định dạng ảnh được phép
-      // Các tùy chọn khác tại đây
-    });
+exports.uploadPhotosToCloudinary = async (photoBuffer) =>
+  new Promise((resolve, reject) => {
+    cloudinary.uploader
+      .upload_stream(
+        (result) => {
+          console.log("result", result);
+          resolve(result.secure_url); // Trả về secure_url khi upload thành công
+        },
+        { resource_type: "image", format: "jpg" }
+      )
+      .end(photoBuffer, (error) => {
+        if (error) {
+          reject(new Error("Failed to upload photo to Cloudinary"));
+        }
+      });
+  });
 
-    return result.secure_url; // Trả về URL của ảnh đã tải lên
-  } catch (error) {
-    throw new Error("Failed to upload image to Cloudinary");
-  }
-};
-
-// Hàm tải file lên Cloudinary
-exports.uploadFile = async (file) => {
-  try {
-    const result = await cloudinary.uploader.upload(file, {
-      folder: "files", // Thay đổi theo cấu trúc thư mục của bạn
-      resource_type: "auto", // Loại tài nguyên (auto hoặc raw)
-      // Các tùy chọn khác tại đây
-    });
-
-    return result.secure_url; // Trả về URL của file đã tải lên
-  } catch (error) {
-    throw new Error("Failed to upload file to Cloudinary");
-  }
-};
+// Hàm tải tệp lên Cloudinary
+exports.uploadFilesToCloudinary = async (fileBuffer) =>
+  new Promise((resolve, reject) => {
+    cloudinary.uploader
+      .upload_stream(
+        (result) => {
+          console.log("result", result);
+          resolve(result.secure_url); // Trả về secure_url khi upload thành công
+        },
+        { resource_type: "auto" } // resource_type có thể là "image", "video", "raw", hoặc "auto" để phân loại tài nguyên tự động
+      )
+      .end(fileBuffer, (error) => {
+        if (error) {
+          reject(new Error("Failed to upload file to Cloudinary"));
+        }
+      });
+  });
 
 // // Hàm kiểm tra kết nối và tải ảnh lên Cloudinary
 // const testCloudinaryConnection = async () => {
 //   try {
 //     const testImageFilePath = "../../src/1.jpeg"; // Thay đổi đường dẫn tới hình ảnh
 
-//     const imageUrl = await uploadImage(testImageFilePath);
+//     const imageUrl = await uploadPhotosToCloudinary(testImageFilePath);
 //     console.log("Uploaded image URL:", imageUrl);
 //   } catch (error) {
 //     console.error("Failed to upload image to Cloudinary:", error);

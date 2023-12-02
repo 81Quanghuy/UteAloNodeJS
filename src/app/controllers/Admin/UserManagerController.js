@@ -3,7 +3,7 @@ const Account = require("../../models/Account");
 const Role = require("../../models/Role");
 const authMethod = require("../../../auth/auth.method");
 const { getUserWithRole } = require("../../../utils/Populate/User");
-const UserResponse = require("../../../utils/DTO/UserResponse");
+const UsersResponse = require("../../../utils/DTO/UsersResponse");
 
 function handleInternalServerError(req, res, error) {
   console.error(error);
@@ -31,7 +31,7 @@ class UserManagerController {
       console.log("users", users);
       const formattedUsers = users.map(
         (user) =>
-          new UserResponse({
+          new UsersResponse({
             userId: user._id,
             userName: user.userName || null,
             address: user.address || null,
@@ -124,7 +124,7 @@ class UserManagerController {
       return res.status(200).json({
         success: true,
         message: "Update successful",
-        result: new UserResponse({
+        result: new UsersResponse({
           userId: updatedUser._id,
           userName: updatedUser.userName || null,
           address: updatedUser.address || null,

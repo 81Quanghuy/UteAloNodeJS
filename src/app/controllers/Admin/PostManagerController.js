@@ -1,4 +1,6 @@
+/* eslint-disable no-await-in-loop */
 const mongoose = require("mongoose");
+const { log } = require("console");
 const Post = require("../../models/Post"); // Import Post model
 const Like = require("../../models/Like"); // Import Like model
 const User = require("../../models/User"); // Import User model
@@ -185,19 +187,19 @@ class PostManagerController {
 
   async createPost(req, res) {
     const { authorization } = req.headers;
-    const requestDTO = req.body; // Lấy dữ liệu từ request body
-    console.log("files", req.file);
+    const requestDTO = req.body;
     const token = authorization.split(" ")[1];
     const currentUserId = await authMethod.getUserIdFromJwt(token);
     const user = await getUserWithRole(currentUserId);
     if (!user || (user.role && user.role.roleName !== "Admin")) {
       return res.status(403).json({ success: false, message: "Access Denied" });
     }
-    if (!requestDTO.content && !req.file) {
+    if (!requestDTO.content && req.files.length === 0) {
       return res
         .status(400)
-        .json({ success: false, message: "Content is required" });
+        .json({ success: false, message: "Content or photo is required" });
     }
+
     try {
       // Tạo một đối tượng Post từ dữ liệu trong request
       const post = new Post({
@@ -208,17 +210,36 @@ class PostManagerController {
         userId: currentUserId,
       });
 
-      // Xử lý upload ảnh nếu có
-      if (req.file) {
-        const photoURL = await Cloudinary.uploadImage(req.file);
-        post.photos = photoURL;
-      }
+      if (req.files && req.files.length > 0) {
+        let photoURL = null;
+        let fileURL = null;
+        let photoUploaded = false; // Biến để kiểm soát việc upload ảnh
+        let fileUploaded = false; // Biến để kiểm soát việc upload file
 
-      // // Xử lý upload file nếu có
-      // if (requestDTO.files) {
-      //   const fileURL = await Cloudinary.uploadFile(requestDTO.files);
-      //   post.files = fileURL;
-      // }
+        for (const file of req.files) {
+          if (!photoUploaded && file.fieldname === "photos") {
+            photoURL = await Cloudinary.uploadPhotosToCloudinary(file.buffer);
+            photoUploaded = true; // Đã upload ảnh, đặt cờ thành true để không upload ảnh nữa
+          }
+          if (!fileUploaded && file.fieldname === "files") {
+            fileURL = await Cloudinary.uploadFilesToCloudinary(file.buffer);
+            fileUploaded = true; // Đã upload file, đặt cờ thành true để không upload file nữa
+          }
+
+          // Kiểm tra nếu cả hai đã được upload thì thoát khỏi vòng lặp
+          if (photoUploaded && fileUploaded) {
+            break;
+          }
+        }
+
+        if (photoURL) {
+          post.photos = photoURL;
+        }
+
+        if (fileURL) {
+          post.files = fileURL;
+        }
+      }
 
       // Lưu bài post vào MongoDB
       await post.save();

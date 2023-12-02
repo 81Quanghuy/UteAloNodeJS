@@ -45,7 +45,8 @@ app.use(express.json());
 
 // Khởi tạo multer để xử lý form-data
 const upload = multer();
-app.use(upload.none()); // Sử dụng multer để xử lý form-data và gửi dữ liệu vào req.body
+// app.use(upload.none()); // Sử dụng multer để xử lý form-data và gửi dữ liệu vào req.body
+app.use(upload.any());
 
 // handle form data of method post html
 app.use(
