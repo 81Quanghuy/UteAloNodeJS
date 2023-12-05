@@ -16,6 +16,8 @@ const Search = require("./search");
 const Album = require("./album");
 const BadWord = require("./badword");
 const List = require("./list");
+const LikePost = require("./likesPost");
+const LikeComment = require("./likesComment");
 
 const logEvents = require("../Helpers/logEvents");
 const bot = require("../utils/SlackLogger/bot");
@@ -61,11 +63,14 @@ function route(app) {
   app.use("/conversations/:conversationId/messages", Message);
   // app.use('/conversations', Conversation);
   //	app.use('/posts/:postId/comments', Comment);
-  app.use("/posts", Post);
   app.use("/users", User);
   app.use("/roles", Role);
   app.use("/api/v1/auth", Auth);
   app.use("/api/v1/admin", Admin);
+  app.use("/api/v1/post", Post);
+  app.use("/api/v1/post/comment", Comment);
+  app.use("/api/v1/post/like", LikePost);
+  app.use("/api/v1/comment/like", LikeComment);
   app.use("/api/v1/user", User);
   app.use("/notifications", Notification);
   // app.use('/reports', Report);

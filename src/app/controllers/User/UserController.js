@@ -17,6 +17,7 @@ class UserManagerController {
     const { authorization } = req.headers;
     const userId = req.params;
     const userIdObj = mongoose.Types.ObjectId(userId.userId);
+    console.log("userId", userId.userId);
     try {
       const token = authorization.split(" ")[1];
       const currentUserId = await authMethod.getUserIdFromJwt(token);
@@ -24,8 +25,6 @@ class UserManagerController {
         .populate("account")
         .populate("role", "roleName")
         .exec();
-
-      console.log("user", user);
 
       if (!user) {
         return res

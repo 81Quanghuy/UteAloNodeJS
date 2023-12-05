@@ -1,32 +1,27 @@
-const express = require('express');
+const express = require("express");
 
 const router = express.Router();
-const AuthoMiddleware = require('../app/middlewares/AuthMiddleware');
-const PostController = require('../app/controllers/PostController');
+const PostController = require("../app/controllers/User/PostController");
 
-// create a post
-router.post('/', AuthoMiddleware.isAuth, PostController.add);
-// share a post
-router.post('/:id/share', AuthoMiddleware.isAuth, PostController.share);
+// Lấy những bài viết của user theo id
+router.get("/:userId/post", PostController.getPostsByUserId);
 
-// like / dislike a post
-router.put('/:id/react', AuthoMiddleware.isAuth, PostController.react);
-// update a post
-router.put('/:id', AuthoMiddleware.isAuth, PostController.update);
+// Lấy thông tin chi tiết của 1 bài viết
+router.get("/:postId", PostController.getPostDetailsByPostId);
 
-// delete a post
-router.delete('/:id', AuthoMiddleware.isAuth, PostController.delete);
+// Tạo bài viết
+router.post("/create", PostController.createPostByUser);
 
-router.get('/home', AuthoMiddleware.isAuth, PostController.getPostInHome);
-// get user's all posts
-router.get('/user/:id', AuthoMiddleware.getUserFromToken, PostController.getAll);
-// get reactions of a post
-router.get('/:id/reacts', PostController.getAllReactions);
-// search
-router.get('/search', AuthoMiddleware.isAuth, PostController.search);
-// get a post
-router.get('/:id', AuthoMiddleware.getUserFromToken, PostController.get);
-// get all posts of current user
-router.get('/', AuthoMiddleware.isAuth, PostController.getAllPosts);
+// Xóa bài viết
+router.put("/delete/:postId", PostController.deletePostByUser);
+
+// Cập nhật bài viết
+router.put("/update/:postId", PostController.updatePostByUser);
+
+// Lấy 9 ảnh mới nhất từ bài viết của người dùng
+router.get(
+  "/user/:userId/latest-photos",
+  PostController.getLatestUserPostImages
+);
 
 module.exports = router;

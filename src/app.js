@@ -1,3 +1,6 @@
+/* eslint-disable import/no-extraneous-dependencies */
+/* eslint-disable func-names */
+/* eslint-disable prefer-arrow-callback */
 const express = require("express"); // dowload express library
 const path = require("path");
 const morgan = require("morgan");
@@ -12,6 +15,7 @@ const HOSTS = require("./configs/cors");
 // convert Post to PUT method
 
 const app = express();
+
 app.use(
   cors({
     origin: HOSTS,
@@ -47,6 +51,22 @@ app.use(express.json());
 const upload = multer();
 // app.use(upload.none()); // Sử dụng multer để xử lý form-data và gửi dữ liệu vào req.body
 app.use(upload.any());
+
+// Middleware để log dữ liệu đến từ client
+app.use(function (req, res, next) {
+  if (req.is("text/*")) {
+    let data = "";
+    req.on("data", function (chunk) {
+      data += chunk.toString();
+    });
+    req.on("end", function () {
+      req.body = { id: data }; // Đặt giá trị id vào req.body
+      next();
+    });
+  } else {
+    next();
+  }
+});
 
 // handle form data of method post html
 app.use(

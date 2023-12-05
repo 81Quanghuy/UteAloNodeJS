@@ -1,20 +1,27 @@
-// const express = require('express');
+const express = require("express");
 
-// const router = express.Router({ mergeParams: true });
-// const AuthoMiddleware = require('../app/middlewares/AuthMiddleware');
-// const CommentController = require('../app/controllers/CommentController');
+const router = express.Router();
+const CommentController = require("../app/controllers/User/CommentController");
 
-// router.post('/:id/reply', AuthoMiddleware.isAuth, CommentController.addReply);
-// router.post('/', AuthoMiddleware.isAuth, CommentController.add);
+// Lấy tất cả comment của 1 bài viết
+router.get("/:postId", CommentController.getCommentsByPostId);
 
-// // react comment
-// router.put('/:id/react', AuthoMiddleware.isAuth, CommentController.react);
-// router.put('/:id', AuthoMiddleware.isAuth, CommentController.update);
+// Lấy danh sách phản hồi của 1 bình luận
+router.get(
+  "/:commentId/commentReply",
+  CommentController.getCommentReplyOfComment
+);
 
-// router.delete('/:id', AuthoMiddleware.isAuth, CommentController.delete);
+// Thêm bình luận cho bài viết
+router.post("/create", CommentController.createCommentForPost);
 
-// router.get('/:id/replies', AuthoMiddleware.getUserFromToken, CommentController.getAllReplies);
-// router.get('/:id', AuthoMiddleware.getUserFromToken, CommentController.get);
-// router.get('/', AuthoMiddleware.getUserFromToken, CommentController.getAllOfPost);
+// Phản hồi bình luận
+router.post("/reply", CommentController.replyCommentForPost);
 
-// module.exports = router;
+// Cập nhật bình luận
+router.put("/update/:commentId", CommentController.updateCommentPostByUser);
+
+// Xóa bình luận
+router.put("/delete/:commentId", CommentController.deleteCommentPostByUser);
+
+module.exports = router;

@@ -15,6 +15,7 @@ function handleInternalServerError(req, res, next, error) {
 }
 
 class PostManagerController {
+  // Lấy danh sách bài viết trong hệ thống
   async getListPosts(req, res, next) {
     const { page = 1, items = 10 } = req.query;
     const { authorization } = req.headers;
@@ -114,6 +115,7 @@ class PostManagerController {
     }
   }
 
+  // Xóa bài viết
   async deletePost(req, res, next) {
     const { postId } = req.params; // Lấy postId từ request params
 
@@ -185,6 +187,7 @@ class PostManagerController {
     }
   }
 
+  // Tạo bài viết
   async createPost(req, res) {
     const { authorization } = req.headers;
     const requestDTO = req.body;
@@ -194,6 +197,12 @@ class PostManagerController {
     if (!user || (user.role && user.role.roleName !== "Admin")) {
       return res.status(403).json({ success: false, message: "Access Denied" });
     }
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
     if (!requestDTO.content && req.files.length === 0) {
       return res
         .status(400)
@@ -201,7 +210,6 @@ class PostManagerController {
     }
 
     try {
-      // Tạo một đối tượng Post từ dữ liệu trong request
       const post = new Post({
         content: requestDTO.content,
         privacyLevel: requestDTO.privacyLevel,
@@ -241,15 +249,52 @@ class PostManagerController {
         }
       }
 
-      // Lưu bài post vào MongoDB
       await post.save();
 
-      // Tạo response
+      const postData = await Post.findById(post._id)
+        .populate({
+          path: "userId",
+          select: "userName role",
+          populate: {
+            path: "role",
+            model: "Role",
+            select: "roleName",
+          },
+        })
+        .populate("postGroupId", "postGroupName")
+        .populate("likes", "_id")
+        .populate("comments", "_id");
+
+      const likeIds = postData.likes?.map((like) => like._id) || [];
+      const commentIds = postData.comments?.map((comment) => comment._id) || [];
+      const roleNameP = postData.userId.role
+        ? postData.userId.role.roleName
+        : null;
+
+      const formattedPost = new PostsResponse({
+        postId: postData._id,
+        postTime: postData.postTime,
+        updateAt: postData.updateAt,
+        content: postData.content,
+        photos: postData.photos,
+        files: postData.files,
+        location: postData.location,
+        userId: postData.userId._id,
+        userName: postData.userId.userName,
+        postGroupId: postData.postGroupId,
+        postGroupName: postData.postGroupId
+          ? postData.postGroupId.postGroupName
+          : null,
+        comments: commentIds,
+        likes: likeIds,
+        roleName: roleNameP,
+        privacyLevel: postData.privacyLevel,
+      });
+
       const response = {
         success: true,
         message: "Post Created Successfully",
-        postId: post._id,
-        // Các thông tin khác của bài post có thể thêm vào response
+        result: formattedPost,
       };
 
       return res.status(200).json(response);
@@ -259,6 +304,7 @@ class PostManagerController {
     }
   }
 
+  // Đếm số lượng bài viết theo ngày, tuần, tháng, năm
   async countPosts(req, res) {
     const today = new Date();
     const intervals = [
@@ -353,6 +399,7 @@ class PostManagerController {
     }
   }
 
+  // Đếm số lượng bài viết theo tháng trong 12 tháng gần nhất
   async countPostsBy12Month(req, res, next) {
     const currentDate = new Date();
     const twelveMonthsAgo = new Date(currentDate);
