@@ -2,6 +2,7 @@
 const { log } = require("console");
 const mongoose = require("mongoose");
 const Post = require("../../models/Post");
+const Profile = require("../../models/Profile");
 const User = require("../../models/User");
 const PostsResponse = require("../../../utils/DTO/PostsResponse");
 const authMethod = require("../../../auth/auth.method");
@@ -32,31 +33,34 @@ class PostController {
         .populate({
           path: "userId",
           select: "userName role",
-          populate: {
-            path: "role",
-            model: "Role",
-            select: "roleName",
-          },
+          populate: [
+            {
+              path: "role",
+              model: "Role",
+              select: "roleName",
+            },
+          ],
         })
         .populate("postGroupId", "postGroupName")
         .populate("likes", "_id")
         .populate("comments", "_id")
         .sort({ postTime: -1 });
 
-      if (!posts) {
-        return res.status(404).json({
-          success: false,
-          message: "No posts found for this user",
-          statusCode: 404,
-        });
-      }
+      // Khởi tạo mảng formattedPosts trước vòng lặp
+      const formattedPosts = [];
 
-      const formattedPosts = posts.map((post) => {
+      for (const post of posts) {
+        // Truy vấn thông tin profile cho mỗi bài đăng
+        const profile = await Profile.findOne({ user: post.userId }).exec();
+
+        // Xử lý thông tin của từng bài đăng
         const likeIds = post.likes?.map((like) => like._id) || [];
         const commentIds = post.comments?.map((comment) => comment._id) || [];
         const roleNameP = post.userId.role ? post.userId.role.roleName : null;
+        const avatar = profile ? profile.avatar : null;
 
-        return new PostsResponse({
+        // Tạo đối tượng mới cho từng bài đăng và đẩy vào mảng formattedPosts
+        const formattedPost = new PostsResponse({
           postId: post._id,
           postTime: post.postTime,
           updateAt: post.updateAt,
@@ -74,8 +78,27 @@ class PostController {
           likes: likeIds,
           roleName: roleNameP,
           privacyLevel: post.privacyLevel,
+          avatarUser: avatar,
         });
-      });
+
+        formattedPosts.push(formattedPost);
+      }
+
+      if (formattedPosts.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "No posts found for this user",
+          statusCode: 404,
+        });
+      }
+
+      if (!posts) {
+        return res.status(404).json({
+          success: false,
+          message: "No posts found for this user",
+          statusCode: 404,
+        });
+      }
 
       return res.status(200).json({
         success: true,
@@ -100,11 +123,13 @@ class PostController {
         .populate({
           path: "userId",
           select: "userName role",
-          populate: {
-            path: "role",
-            model: "Role",
-            select: "roleName",
-          },
+          populate: [
+            {
+              path: "role",
+              model: "Role",
+              select: "roleName",
+            },
+          ],
         })
         .populate("postGroupId", "postGroupName")
         .populate("likes", "_id")
@@ -113,6 +138,8 @@ class PostController {
       if (!post) {
         return { success: false, message: "Post not found" };
       }
+
+      const profile = await Profile.findOne({ user: post.userId }).exec();
 
       const likeIds = post.likes?.map((like) => like._id) || [];
       const commentIds = post.comments?.map((comment) => comment._id) || [];
@@ -134,6 +161,7 @@ class PostController {
         likes: likeIds,
         roleName: roleNameP,
         privacyLevel: post.privacyLevel,
+        avatarUser: profile ? profile.avatar : null,
       });
       console.log(post.userId._id.toString());
       if (post.userId._id.toString() !== currentUserId) {
@@ -175,11 +203,20 @@ class PostController {
         .json({ success: false, message: "Content or photo is required" });
     }
 
+    let postGroupIdObj = null;
+    if (
+      requestDTO.postGroupId === undefined &&
+      requestDTO.postGroupId === null &&
+      requestDTO.postGroupId === "0"
+    ) {
+      postGroupIdObj = 0;
+    }
+    console.log("postGroupIdObj", postGroupIdObj);
     try {
       const post = new Post({
         content: requestDTO.content,
         privacyLevel: requestDTO.privacyLevel,
-        postGroupId: requestDTO.postGroupId,
+        postGroupId: postGroupIdObj,
         location: requestDTO.location,
         userId: currentUserId,
       });

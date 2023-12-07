@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const { User } = require("../../models/User");
 const Account = require("../../models/Account");
 const Role = require("../../models/Role");
@@ -26,23 +27,25 @@ class UserManagerController {
       }
       const users = await User.find()
         .populate("role", "roleName")
-        .populate("account", "isActive email")
         .sort({ dayOfBirth: -1 });
       console.log("users", users);
-      const formattedUsers = users.map(
-        (user) =>
-          new UsersResponse({
-            userId: user._id,
-            userName: user.userName || null,
-            address: user.address || null,
-            phone: user.phone || null,
-            gender: user.gender || null,
-            dayOfBirth: user.dayOfBirth || null,
-            isActive: user.account.isActive === true ? "Hoạt động" : "Bị khóa",
-            roleName: user.role ? user.role.roleName : null,
-            email: user.account ? user.account.email : null,
-          })
-      );
+      const formattedUsers = [];
+      for (const user of users) {
+        // eslint-disable-next-line no-await-in-loop
+        const account = await Account.findOne({ user: user._id }).exec();
+        const formattedUser = new UsersResponse({
+          userId: user._id,
+          userName: user.userName || null,
+          address: user.address || null,
+          phone: user.phone || null,
+          gender: user.gender || null,
+          dayOfBirth: user.dayOfBirth || null,
+          isActive: account.isActive === true ? "Hoạt động" : "Bị khóa",
+          roleName: user.role ? user.role.roleName : null,
+          email: account.email || null,
+        });
+        formattedUsers.push(formattedUser);
+      }
 
       const result = {
         content: formattedUsers,
@@ -100,9 +103,7 @@ class UserManagerController {
           .json({ success: false, message: "Access Denied" });
       }
 
-      const user = await User.findById(userId)
-        .populate("role", "roleName")
-        .populate("account", "isActive");
+      const user = await User.findById(userId).populate("role", "roleName");
 
       if (!user) {
         return res.status(404).json({
@@ -112,13 +113,19 @@ class UserManagerController {
         });
       }
 
-      await Account.findByIdAndUpdate(user.account._id, { isActive });
+      const userIdObj = mongoose.Types.ObjectId(userId);
+      const account = await Account.findOne({ user: userIdObj }).exec();
+
+      await Account.findByIdAndUpdate(account._id, { isActive });
       await Role.findByIdAndUpdate(user.role._id, { roleName });
 
       // Lấy lại thông tin người dùng sau khi cập nhật
-      const updatedUser = await User.findById(userId)
-        .populate("role", "roleName")
-        .populate("account", "isActive");
+      const updatedUser = await User.findById(userId).populate(
+        "role",
+        "roleName"
+      );
+
+      const updateAccount = await Account.findOne({ user: userIdObj }).exec();
 
       // Trả về thông tin người dùng đã cập nhật
       return res.status(200).json({
@@ -131,9 +138,9 @@ class UserManagerController {
           phone: updatedUser.phone || null,
           gender: updatedUser.gender || null,
           dayOfBirth: updatedUser.dayOfBirth || null,
-          isActive: updatedUser.account.isActive ? "Hoạt động" : "Bị khóa",
+          isActive: updateAccount.isActive ? "Hoạt động" : "Bị khóa",
           roleName: updatedUser.role ? updatedUser.role.roleName : null,
-          email: updatedUser.account ? updatedUser.account.email : null,
+          email: updateAccount.email || null,
         }),
         statusCode: 200,
       });

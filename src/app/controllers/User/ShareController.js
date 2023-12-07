@@ -9,6 +9,7 @@ const SharesResponse = require("../../../utils/DTO/SharesResponse");
 const authMethod = require("../../../auth/auth.method");
 const { getUserWithRole } = require("../../../utils/Populate/User");
 const Cloudinary = require("../../../configs/cloudinary");
+const Profile = require("../../models/Profile");
 
 function handleInternalServerError(req, res, error) {
   console.error(error);
@@ -52,21 +53,72 @@ class ShareController {
         });
       }
 
-      const formattedShares = shares.map((share) => {
+      const formattedShares = [];
+
+      for (const share of shares) {
+        const profile = await Profile.findOne({ user: share.userId._id });
         const likeIds = share.likes?.map((like) => like._id) || [];
         const commentIds = share.comments?.map((comment) => comment._id) || [];
+        const post = await Post.findById(share.postId)
+          .populate({
+            path: "userId",
+            select: "userName role",
+            populate: [
+              {
+                path: "role",
+                model: "Role",
+                select: "roleName",
+              },
+            ],
+          })
+          .populate("postGroupId", "postGroupName")
+          .populate("likes", "_id")
+          .populate("comments", "_id");
 
-        return new SharesResponse({
+        const profilePost = await Profile.findOne({ user: post.userId }).exec();
+        const likeIdsP = post.likes?.map((like) => like._id) || [];
+        const commentIdsP = post.comments?.map((comment) => comment._id) || [];
+        const roleNameP = post.userId.role ? post.userId.role.roleName : null;
+
+        const formattedPost = new PostsResponse({
+          postId: post._id,
+          postTime: post.postTime,
+          updateAt: post.updateAt,
+          content: post.content,
+          photos: post.photos,
+          files: post.files,
+          location: post.location,
+          userId: post.userId._id,
+          userName: post.userId.userName,
+          postGroupId: post.postGroupId,
+          postGroupName: post.postGroupId
+            ? post.postGroupId.postGroupName
+            : null,
+          comments: commentIdsP,
+          likes: likeIdsP,
+          roleName: roleNameP,
+          privacyLevel: post.privacyLevel,
+          avatarUser: profilePost ? profilePost.avatar : null,
+        });
+
+        const formattedShare = new SharesResponse({
           shareId: share._id,
           createAt: share.createAt,
           updateAt: share.updateAt,
           content: share.content,
-          postId: share.postId,
-          userId: userId.userId,
+          userId: share.userId._id,
+          userName: share.userId.userName,
+          roleName: share.userId.role.roleName,
+          avatarUser: profile?.avatar || null,
           comments: commentIds,
           likes: likeIds,
+          postsResponse: formattedPost,
+          postGroupId: share.postGroupId,
+          postGroupName: share.postGroupName,
         });
-      });
+
+        formattedShares.push(formattedShare);
+      }
 
       if (userId.userId !== currentUserId) {
         return res.status(200).json({
@@ -118,6 +170,48 @@ class ShareController {
         });
       }
 
+      const profile = await Profile.findOne({ user: share.userId._id });
+
+      const post = await Post.findById(share.postId)
+        .populate({
+          path: "userId",
+          select: "userName role",
+          populate: [
+            {
+              path: "role",
+              model: "Role",
+              select: "roleName",
+            },
+          ],
+        })
+        .populate("postGroupId", "postGroupName")
+        .populate("likes", "_id")
+        .populate("comments", "_id");
+
+      const profilePost = await Profile.findOne({ user: post.userId }).exec();
+      const likeIdsP = post.likes?.map((like) => like._id) || [];
+      const commentIdsP = post.comments?.map((comment) => comment._id) || [];
+      const roleNameP = post.userId.role ? post.userId.role.roleName : null;
+
+      const formattedPost = new PostsResponse({
+        postId: post._id,
+        postTime: post.postTime,
+        updateAt: post.updateAt,
+        content: post.content,
+        photos: post.photos,
+        files: post.files,
+        location: post.location,
+        userId: post.userId._id,
+        userName: post.userId.userName,
+        postGroupId: post.postGroupId,
+        postGroupName: post.postGroupId ? post.postGroupId.postGroupName : null,
+        comments: commentIdsP,
+        likes: likeIdsP,
+        roleName: roleNameP,
+        privacyLevel: post.privacyLevel,
+        avatarUser: profilePost ? profilePost.avatar : null,
+      });
+
       const likeIds = share.likes?.map((like) => like._id) || [];
       const commentIds = share.comments?.map((comment) => comment._id) || [];
 
@@ -126,10 +220,15 @@ class ShareController {
         createAt: share.createAt,
         updateAt: share.updateAt,
         content: share.content,
-        postId: share.postId,
         userId: share.userId._id,
+        userName: share.userId.userName,
+        roleName: share.userId.role.roleName,
+        avatarUser: profile?.avatar || null,
         comments: commentIds,
         likes: likeIds,
+        postsResponse: formattedPost,
+        postGroupId: share.postGroupId,
+        postGroupName: share.postGroupName,
       });
       console.log(share.userId._id.toString());
       if (share.userId._id.toString() !== currentUserId) {
@@ -165,11 +264,19 @@ class ShareController {
         .status(404)
         .json({ success: false, message: "User not found" });
     }
-
+    let postGroupIdObj = null;
+    if (
+      requestDTO.postGroupId === undefined &&
+      requestDTO.postGroupId === null &&
+      requestDTO.postGroupId === "0"
+    ) {
+      postGroupIdObj = 0;
+    }
+    console.log("postGroupIdObj", postGroupIdObj);
     try {
       const share = new Share({
         content: requestDTO.content,
-        postGroupId: requestDTO.postGroupId,
+        postGroupId: postGroupIdObj,
         postId: requestDTO.postId,
         userId: currentUserId,
       });

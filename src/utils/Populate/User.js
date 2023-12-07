@@ -184,8 +184,11 @@ exports.populateUserByEmail = async (email) => {
       select: "_id roleName",
     })
     .populate("account", "isActive");
+
   // thêm thuộc tính password vào user
   user.password = account.password;
+  // thêm thuộc tính isActive vào user
+  user.isActive = account.isActive;
   return user;
 };
 

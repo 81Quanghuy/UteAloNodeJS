@@ -361,7 +361,7 @@ class CommentShareController {
   async replyCommentForShare(req, res) {
     try {
       const { authorization } = req.headers;
-      const { shareId, commentId, content } = req.query;
+      const { shareId, commentId, content } = req.body;
       // Lấy thông tin user từ token
       const token = authorization.split(" ")[1];
       const currentUserId = await authMethod.getUserIdFromJwt(token);

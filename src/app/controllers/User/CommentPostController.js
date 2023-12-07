@@ -5,6 +5,7 @@ const Post = require("../../models/Post");
 const User = require("../../models/User");
 const Profile = require("../../models/Profile");
 const Comment = require("../../models/Comment");
+const Like = require("../../models/Like");
 const PostsResponse = require("../../../utils/DTO/PostsResponse");
 const CommentsResponse = require("../../../utils/DTO/CommentsResponse");
 const authMethod = require("../../../auth/auth.method");
@@ -364,10 +365,13 @@ class CommentPostController {
       }
       const commentIdObj = mongoose.Types.ObjectId(commentId);
 
-      // Xóa bài Post dựa trên postId và userId
+      // Xóa bình luận dựa trên commentId và userId
       const deletedComment = await Comment.findOneAndDelete({
         _id: commentIdObj,
       });
+
+      // Xóa like của bình luận
+      await Like.findOneAndDelete({ user: currentUserId, comment: commentId });
 
       if (!deletedComment) {
         return res
@@ -390,7 +394,7 @@ class CommentPostController {
   async replyCommentForPost(req, res) {
     try {
       const { authorization } = req.headers;
-      const { postId, commentId, content } = req.query;
+      const { postId, commentId, content } = req.body;
       // Lấy thông tin user từ token
       const token = authorization.split(" ")[1];
       const currentUserId = await authMethod.getUserIdFromJwt(token);

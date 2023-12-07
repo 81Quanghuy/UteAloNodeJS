@@ -4,6 +4,7 @@ const { log } = require("console");
 const { User } = require("../../models/User");
 const authMethod = require("../../../auth/auth.method");
 const Profile = require("../../models/Profile");
+const Account = require("../../models/Account");
 const UserResponse = require("../../../utils/DTO/UserResponse");
 const Cloudinary = require("../../../configs/cloudinary");
 
@@ -22,7 +23,6 @@ class UserManagerController {
       const token = authorization.split(" ")[1];
       const currentUserId = await authMethod.getUserIdFromJwt(token);
       const user = await User.findById(userIdObj)
-        .populate("account")
         .populate("role", "roleName")
         .exec();
 
@@ -31,6 +31,8 @@ class UserManagerController {
           .status(404)
           .json({ success: false, message: "User not found" });
       }
+
+      const account = await Account.findOne({ user: userIdObj }).exec();
       const profile = await Profile.findOne({ user: userIdObj }).exec();
 
       const {
@@ -50,20 +52,18 @@ class UserManagerController {
 
       const roleName = user.role ? user.role.roleName : null;
 
-      const { email, isActive, createdAt } = user.account || {}; // Lấy giá trị email từ account
-
       const { avatar, background, bio, updatedAt } = profile || {};
 
       const userResponseData = {
         userId: userId || null,
         phone: phone || null,
-        email: email || null, // Sử dụng giá trị email từ account
+        email: account.email || null, // Sử dụng giá trị email từ account
         userName: userName || null,
         address: address || null,
         dayOfBirth: dayOfBirth || null,
         gender: gender || null,
-        isActive: isActive || null,
-        createdAt: createdAt || null,
+        isActive: account.isActive || null,
+        createdAt: account.createdAt || null,
         updatedAt: updatedAt || null,
         roleName: roleName || null,
         avatar: avatar || null,

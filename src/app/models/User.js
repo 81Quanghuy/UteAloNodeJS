@@ -39,6 +39,10 @@ const UserSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Account",
     },
+    // profile: {
+    //   type: mongoose.Schema.Types.ObjectId,
+    //   ref: "Profile",
+    // },
     refreshToken: {
       type: String,
     },

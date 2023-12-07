@@ -196,37 +196,37 @@ class AuthoController {
         gender: req.body.gender,
       });
 
-      const dataToken = {
-        userId: newUser._id,
-        role: "USER",
-      };
+      // const dataToken = {
+      //   userId: newUser._id,
+      //   role: "USER",
+      // };
 
-      const accessToken = await authMethod.generateToken(
-        dataToken,
-        accessTokenLife
-      );
+      // const accessToken = await authMethod.generateToken(
+      //   dataToken,
+      //   accessTokenLife
+      // );
 
-      if (!accessToken) {
-        return responseError(
-          res,
-          401,
-          "Đăng ký không thành công, vui lòng thử lại."
-        );
-      }
+      // if (!accessToken) {
+      //   return responseError(
+      //     res,
+      //     401,
+      //     "Đăng ký không thành công, vui lòng thử lại."
+      //   );
+      // }
 
-      const refreshToken = await authMethod.generateToken(
-        dataToken,
-        refreshTokenSecret,
-        refreshTokenLife
-      );
-      newUser.refreshToken = refreshToken;
-      const newRefreshToken = new RefreshToken({
-        userId: newUser._id,
-        token: refreshToken,
-        expired: false,
-        revoked: false,
-      });
-      await newRefreshToken.save();
+      // const refreshToken = await authMethod.generateToken(
+      //   dataToken,
+      //   refreshTokenSecret,
+      //   refreshTokenLife
+      // );
+      // newUser.refreshToken = refreshToken;
+      // const newRefreshToken = new RefreshToken({
+      //   userId: newUser._id,
+      //   token: refreshToken,
+      //   expired: false,
+      //   revoked: false,
+      // });
+      // await newRefreshToken.save();
       await newUser.save();
       const newAccount = new Account({
         email: req.body.email,
@@ -238,7 +238,6 @@ class AuthoController {
       await new Profile({
         user: newUser,
       }).save();
-      // check roleName is SinhVien create postGroup
 
       if (roleId.roleName === "SinhVien") {
         const postGroup = await PostGroup.findOne({
@@ -257,7 +256,7 @@ class AuthoController {
       return res.status(200).json({
         success: true,
         message: "Sign Up Success",
-        result: { accessToken, refreshToken, user: newUser },
+        result: { user: newUser },
         statusCode: 200,
       });
     } catch (err) {
@@ -302,7 +301,7 @@ class AuthoController {
         return responseError(res, 401, "Mật khẩu không chính xác.");
       }
 
-      if (!user.account.isActive) {
+      if (!user.isActive) {
         return responseError(res, 401, "Tài khoản bị khóa.");
       }
 
@@ -349,7 +348,7 @@ class AuthoController {
 
       return res.status(200).json({
         success: true,
-        message: "Sign Up Success",
+        message: "Sign In Success",
         result: {
           accessToken,
           refreshToken,

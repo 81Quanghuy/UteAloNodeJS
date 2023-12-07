@@ -4,7 +4,7 @@ const router = express.Router();
 const PostController = require("../app/controllers/User/PostController");
 
 // Lấy những bài viết của user theo id
-router.get("/:userId/post", PostController.getPostsByUserId);
+router.get("/user/:userId", PostController.getPostsByUserId);
 
 // Lấy thông tin chi tiết của 1 bài viết
 router.get("/:postId", PostController.getPostDetailsByPostId);

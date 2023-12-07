@@ -15,6 +15,7 @@ class PostsResponse {
     this.likes = post.likes || [];
     this.roleName = post.roleName || null;
     this.privacyLevel = post.privacyLevel || null;
+    this.avatarUser = post.avatarUser || null;
   }
 }
 
