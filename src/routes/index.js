@@ -1,22 +1,16 @@
 const createError = require("http-errors");
 const { v4: uuidv4 } = require("uuid");
-const Message = require("./messages");
+
 // const Conversation = require('./conversations');
 const Auth = require("./auth");
 const Admin = require("./admin");
 const User = require("./users");
-const File = require("./files");
 const Post = require("./posts");
-const Role = require("./roles");
-const Comment = require("./comments");
-const Report = require("./reports");
-const Notification = require("./notification");
-const Hobby = require("./hobby");
-const Search = require("./search");
-const Album = require("./album");
-const BadWord = require("./badword");
-const List = require("./list");
+const CommentPost = require("./commentPost");
+const CommentShare = require("./commentShare");
+const Share = require("./shares");
 const LikePost = require("./likesPost");
+const LikeShare = require("./likesShare");
 const LikeComment = require("./likesComment");
 
 const logEvents = require("../Helpers/logEvents");
@@ -55,24 +49,18 @@ function route(app) {
   // limit access to 20 requests per 1 minutes
   // app.use(limiter);
   // route
-  app.use("/search", Search);
-  // app.use('/badwords', BadWord);
-  // app.use('/albums', Album);
-  // 	app.use('/admin', Admin);
-  // app.use('/files', File);
-  app.use("/conversations/:conversationId/messages", Message);
-  // app.use('/conversations', Conversation);
-  //	app.use('/posts/:postId/comments', Comment);
   app.use("/users", User);
-  app.use("/roles", Role);
   app.use("/api/v1/auth", Auth);
   app.use("/api/v1/admin", Admin);
   app.use("/api/v1/post", Post);
-  app.use("/api/v1/post/comment", Comment);
+  app.use("/api/v1/share", Share);
+  app.use("/api/v1/post/comment", CommentPost);
+  app.use("/api/v1/share/comment", CommentShare);
   app.use("/api/v1/post/like", LikePost);
+  app.use("/api/v1/share/like", LikeShare);
   app.use("/api/v1/comment/like", LikeComment);
   app.use("/api/v1/user", User);
-  app.use("/notifications", Notification);
+
   // app.use('/reports', Report);
   // app.use('/hobbies', Hobby);
   // app.use('/list', List);

@@ -4,23 +4,6 @@ const mongoosePaginate = require("mongoose-paginate-v2");
 const Joi = require("joi");
 const Account = require("./Account");
 
-const friend = mongoose.Schema(
-  {
-    user1: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    },
-    user2: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    },
-    status: {
-      type: String,
-    },
-  },
-  { _id: false }
-);
-
 const UserSchema = new mongoose.Schema(
   {
     userName: {
@@ -67,6 +50,12 @@ const UserSchema = new mongoose.Schema(
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Comment",
+      },
+    ],
+    friend: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Friend",
       },
     ],
   },

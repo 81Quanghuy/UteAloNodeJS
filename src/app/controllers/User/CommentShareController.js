@@ -4,9 +4,11 @@ const mongoose = require("mongoose");
 const Post = require("../../models/Post");
 const User = require("../../models/User");
 const Profile = require("../../models/Profile");
+const Share = require("../../models/Share");
 const Comment = require("../../models/Comment");
 const PostsResponse = require("../../../utils/DTO/PostsResponse");
 const CommentsResponse = require("../../../utils/DTO/CommentsResponse");
+const CommentsShareResponse = require("../../../utils/DTO/CommentsShareResponse");
 const authMethod = require("../../../auth/auth.method");
 const { getUserWithRole } = require("../../../utils/Populate/User");
 const Cloudinary = require("../../../configs/cloudinary");
@@ -16,22 +18,22 @@ function handleInternalServerError(req, res, error) {
   res.status(500).json({ success: false, message: "Internal Server Error" });
 }
 
-class CommentController {
+class CommentShareController {
   // Lấy những bình luận của bài viết theo postId
-  async getCommentsByPostId(req, res, next) {
-    const postId = req.params;
+  async getCommentsByShareId(req, res, next) {
+    const shareId = req.params;
     try {
-      const post = await Post.findById(postId.postId);
-      if (!post) {
+      const share = await Share.findById(shareId.shareId);
+      if (!share) {
         return res
           .status(404)
-          .json({ success: false, message: "Post not found" });
+          .json({ success: false, message: "Share not found" });
       }
 
       const comments = await Comment.aggregate([
         {
           $match: {
-            post: mongoose.Types.ObjectId(postId.postId), // Ánh xạ postId với ObjectId của MongoDB
+            share: mongoose.Types.ObjectId(shareId.shareId), // Ánh xạ postId với ObjectId của MongoDB
             commentReply: null, // Kiểm tra commentReply là null
           },
         },
@@ -103,7 +105,7 @@ class CommentController {
         const userProfile = comment.userProfile || {};
         const likeIds = comment.likes?.map((like) => like._id) || []; // Sử dụng optional chaining và gán một mảng rỗng nếu likes không tồn tại
 
-        return new CommentsResponse({
+        return new CommentsShareResponse({
           commentId: comment._id,
           content: comment.content,
           createTime: comment.createTime,
@@ -112,13 +114,13 @@ class CommentController {
           userAvatar: userProfile.avatar || "",
           userId: userProfile.user,
           likes: likeIds,
-          postId: comment.post ? comment.post._id : null,
+          shareId: comment.share ? comment.share._id : null,
         });
       });
 
       return res.status(200).json({
         success: true,
-        message: "Retrieving comment of post successfully",
+        message: "Retrieving comment of share post successfully",
         result: formattedComments,
         statusCode: 200,
       });
@@ -132,12 +134,17 @@ class CommentController {
     const { commentId } = req.params;
     console.log("commentId", commentId);
     try {
-      const comment = await Comment.findById(commentId);
+      const comment = await Comment.findById(commentId).populate(
+        "user",
+        "userName"
+      );
       if (!comment) {
         return res
           .status(404)
           .json({ success: false, message: "Comment not found" });
       }
+
+      const userOwnerShare = comment.user.userName;
 
       // const commentIdObj = mongoose.Types.ObjectId(commentId);
       // console.log("commentIdObj", commentIdObj);
@@ -219,7 +226,7 @@ class CommentController {
         const userProfile = comment.userProfile || {};
         const likeIds = comment.likes?.map((like) => like._id) || []; // Sử dụng optional chaining và gán một mảng rỗng nếu likes không tồn tại
 
-        return new CommentsResponse({
+        return new CommentsShareResponse({
           commentId: comment._id,
           content: comment.content,
           createTime: comment.createTime,
@@ -228,7 +235,8 @@ class CommentController {
           userAvatar: userProfile.avatar || "",
           userId: userProfile.user,
           likes: likeIds,
-          postId: comment.post ? comment.post._id : null,
+          shareId: comment.share ? comment.share._id : null,
+          userOwner: userOwnerShare,
         });
       });
 
@@ -244,10 +252,10 @@ class CommentController {
   }
 
   // Thêm bình luận cho bài viết
-  async createCommentForPost(req, res) {
+  async createCommentForShare(req, res) {
     try {
       const { authorization } = req.headers;
-      const { postId, content } = req.body;
+      const { shareId, content } = req.body;
       // Lấy thông tin user từ token
       const token = authorization.split(" ")[1];
       const currentUserId = await authMethod.getUserIdFromJwt(token);
@@ -261,54 +269,25 @@ class CommentController {
       }
 
       // Kiểm tra xem bài viết có tồn tại không
-      const post = await Post.findById(postId);
-      if (!post) {
+      const share = await Share.findById(shareId);
+      if (!share) {
         return res
           .status(404)
-          .json({ success: false, message: "Post not found" });
-      }
-
-      if (!content && req.files.length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: "Content or photos is required",
-          statusCode: 400,
-        });
+          .json({ success: false, message: "Share not found" });
       }
 
       // Tạo mới comment
       const comment = new Comment({
         user: currentUserId,
         content,
-        post: postId,
+        share: shareId,
       });
-
-      if (req.files && req.files.length > 0) {
-        let photoURL = null;
-        let photoUploaded = false; // Biến để kiểm soát việc upload ảnh
-
-        for (const file of req.files) {
-          if (!photoUploaded && file.fieldname === "photos") {
-            photoURL = await Cloudinary.uploadPhotosToCloudinary(file.buffer);
-            photoUploaded = true; // Đã upload ảnh, đặt cờ thành true để không upload ảnh nữa
-          }
-
-          // Kiểm tra nếu cả hai đã được upload thì thoát khỏi vòng lặp
-          if (photoUploaded) {
-            break;
-          }
-        }
-
-        if (photoURL) {
-          comment.photos = photoURL;
-        }
-      }
 
       await comment.save();
 
       // Thêm comment mới vào danh sách comment của bài viết
-      post.comments.push(comment._id);
-      await post.save();
+      share.comments.push(comment._id);
+      await share.save();
 
       console.log("comment", comment);
 
@@ -318,7 +297,7 @@ class CommentController {
       const { avatar } = profile || {};
       const likeIds = comment.likes?.map((like) => like._id) || [];
 
-      const formattedComment = new CommentsResponse({
+      const formattedComment = new CommentsShareResponse({
         commentId: comment._id,
         content: comment.content || null,
         createTime: comment.createTime || null,
@@ -327,12 +306,12 @@ class CommentController {
         userId: user._id || null,
         userAvatar: avatar || null,
         likes: likeIds,
-        postId: comment.post ? comment.post._id : null,
+        share: comment.share ? comment.share._id : null,
       });
 
       return res.status(200).json({
         success: true,
-        message: "Comment created successfully",
+        message: "Comment Share Successfully",
         result: formattedComment,
       });
     } catch (error) {
@@ -342,7 +321,7 @@ class CommentController {
   }
 
   // Xóa bình luận
-  async deleteCommentPostByUser(req, res, next) {
+  async deleteCommentShareByUser(req, res, next) {
     const { commentId } = req.params;
     try {
       const { authorization } = req.headers;
@@ -379,10 +358,10 @@ class CommentController {
   }
 
   // Phản hồi bình luận
-  async replyCommentForPost(req, res) {
+  async replyCommentForShare(req, res) {
     try {
       const { authorization } = req.headers;
-      const { postId, commentId, content } = req.query;
+      const { shareId, commentId, content } = req.query;
       // Lấy thông tin user từ token
       const token = authorization.split(" ")[1];
       const currentUserId = await authMethod.getUserIdFromJwt(token);
@@ -395,11 +374,11 @@ class CommentController {
           .json({ success: false, message: "User not found" });
       }
       // Kiểm tra xem bài viết có tồn tại không
-      const post = await Post.findById(postId);
-      if (!post) {
+      const share = await Share.findById(shareId);
+      if (!share) {
         return res
           .status(404)
-          .json({ success: false, message: "Post not found" });
+          .json({ success: false, message: "Share not found" });
       }
 
       // Kiểm tra xem bình luận có tồn tại không
@@ -410,49 +389,20 @@ class CommentController {
           .json({ success: false, message: "Comment not found" });
       }
 
-      if (!content && req.files.length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: "Content or photos is required",
-          statusCode: 400,
-        });
-      }
-
       // Tạo mới comment
       const commentReply = new Comment({
         user: currentUserId,
         content,
-        post: postId,
+        share: shareId,
         commentReply: commentId,
       });
-
-      if (req.files && req.files.length > 0) {
-        let photoURL = null;
-        let photoUploaded = false; // Biến để kiểm soát việc upload ảnh
-
-        for (const file of req.files) {
-          if (!photoUploaded && file.fieldname === "photos") {
-            photoURL = await Cloudinary.uploadPhotosToCloudinary(file.buffer);
-            photoUploaded = true; // Đã upload ảnh, đặt cờ thành true để không upload ảnh nữa
-          }
-
-          // Kiểm tra nếu cả hai đã được upload thì thoát khỏi vòng lặp
-          if (photoUploaded) {
-            break;
-          }
-        }
-
-        if (photoURL) {
-          commentReply.photos = photoURL;
-        }
-      }
 
       console.log("commentReply", commentReply);
 
       await commentReply.save();
       // Thêm comment mới vào danh sách comment của bài viết
-      post.comments.push(commentReply._id);
-      await post.save();
+      share.comments.push(commentReply._id);
+      await share.save();
 
       const currentUserIdObj = mongoose.Types.ObjectId(currentUserId);
       const profile = await Profile.findOne({ user: currentUserIdObj }).exec();
@@ -461,7 +411,7 @@ class CommentController {
       const { avatar } = profile || {};
       const likeIds = commentReply.likes?.map((like) => like._id) || [];
 
-      const formattedComment = new CommentsResponse({
+      const formattedComment = new CommentsShareResponse({
         commentId: commentReply._id,
         content: commentReply.content || null,
         createTime: commentReply.createTime || null,
@@ -470,12 +420,12 @@ class CommentController {
         userId: user._id || null,
         userAvatar: avatar || null,
         likes: likeIds,
-        postId: commentReply.post ? commentReply.post._id : null,
+        shareId: commentReply.share ? commentReply.share._id : null,
       });
 
       return res.status(200).json({
         success: true,
-        message: "Reply Comment Post Successfully",
+        message: "Reply Comment Share Post Successfully",
         result: formattedComment,
       });
     } catch (error) {
@@ -484,8 +434,8 @@ class CommentController {
     }
   }
 
-  // Cập nhật bài viết
-  async updateCommentPostByUser(req, res, next) {
+  // Cập nhật bình luận
+  async updateCommentShareByUser(req, res, next) {
     const { authorization } = req.headers;
     const { commentId } = req.params;
     const { content } = req.body;
@@ -517,37 +467,9 @@ class CommentController {
         });
       }
 
-      if (!content && req.files.length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: "Content or photos is required",
-          statusCode: 400,
-        });
-      }
-
       // Cập nhật các trường thông tin bài viết nếu có trong updateFields
       if (content !== null) {
         comment.content = content;
-      }
-      if (req.files && req.files.length > 0) {
-        let photoURL = null;
-        let photoUploaded = false; // Biến để kiểm soát việc upload ảnh
-
-        for (const file of req.files) {
-          if (!photoUploaded && file.fieldname === "photos") {
-            photoURL = await Cloudinary.uploadPhotosToCloudinary(file.buffer);
-            photoUploaded = true; // Đã upload ảnh, đặt cờ thành true để không upload ảnh nữa
-          }
-
-          // Kiểm tra nếu cả hai đã được upload thì thoát khỏi vòng lặp
-          if (photoUploaded) {
-            break;
-          }
-        }
-
-        if (photoURL) {
-          comment.photos = photoURL;
-        }
       }
 
       // Lưu thông tin bình luận đã cập nhật
@@ -565,4 +487,4 @@ class CommentController {
   }
 }
 
-module.exports = new CommentController();
+module.exports = new CommentShareController();

@@ -8,7 +8,7 @@ const LikeSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
-    shareId: {
+    share: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Share",
     },

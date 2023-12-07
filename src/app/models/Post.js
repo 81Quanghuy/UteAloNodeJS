@@ -36,6 +36,7 @@ const PostSchema = new mongoose.Schema(
       type: String,
       enum: ["PUBLIC", "FRIENDS", "GROUP_MEMBERS", "PRIVATE", "ADMIN"],
     },
+    // Mối quan hệ với Like
     likes: [
       {
         type: mongoose.Schema.Types.ObjectId,

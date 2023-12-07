@@ -6,9 +6,11 @@ const User = require("../../models/User");
 const Like = require("../../models/Like");
 const Profile = require("../../models/Profile");
 const Comment = require("../../models/Comment");
+const Share = require("../../models/Share");
 const PostsResponse = require("../../../utils/DTO/PostsResponse");
 const CommentsResponse = require("../../../utils/DTO/CommentsResponse");
 const LikePostResponse = require("../../../utils/DTO/LikePostResponse");
+const LikeShareResponse = require("../../../utils/DTO/LikeShareResponse");
 const authMethod = require("../../../auth/auth.method");
 const { getUserWithRole } = require("../../../utils/Populate/User");
 const Cloudinary = require("../../../configs/cloudinary");
@@ -18,38 +20,42 @@ function handleInternalServerError(req, res, error) {
   res.status(500).json({ success: false, message: "Internal Server Error" });
 }
 
-class LikePostController {
-  // Lấy danh sách yêu thích của bài viết theo postId
-  async getLikesOfPost(req, res, next) {
-    const postId = req.params;
+class LikeShareController {
+  // Lấy danh sách yêu thích của bài share theo shareId
+  async getLikesOfShare(req, res, next) {
+    const shareId = req.params;
     try {
-      const likes = await Like.find({ post: postId.postId }).populate("user");
-      const post = await Post.findById(postId.postId);
-      if (!post) {
+      const likes = await Like.find({ share: shareId.shareId }).populate(
+        "user"
+      );
+
+      console.log("likes", likes);
+      const share = await Share.findById(shareId.shareId);
+      if (!share) {
         return res
           .status(404)
-          .json({ success: false, message: "Post not found" });
+          .json({ success: false, message: "Share not found" });
       }
 
       if (likes.length === 0) {
         return res
           .status(403)
-          .json({ success: false, message: "This post has no like" });
+          .json({ success: false, message: "This share has no like" });
       }
 
       const formattedLikes = likes.map(
         (like) =>
-          new LikePostResponse({
+          new LikeShareResponse({
             likeId: like._id,
-            postId: like.post,
+            shareId: like.share,
             userName: like.user.userName,
           })
       );
 
-      // Trả về danh sách likes của bài post
+      // Trả về danh sách likes của bài share
       return res.status(200).json({
         success: true,
-        message: "Retrieving likes of post successfully",
+        message: "Retrieving likes of share successfully",
         result: formattedLikes,
         statusCode: 200,
       });
@@ -58,12 +64,12 @@ class LikePostController {
     }
   }
 
-  // Thích và bỏ thích bài viết
-  async toggleLikePost(req, res, next) {
+  // Thích và bỏ thích bài share
+  async toggleLikeShare(req, res, next) {
     try {
       const { authorization } = req.headers;
-      const { postId } = req.params;
-      const post = await Post.findById(postId);
+      const { shareId } = req.params;
+      const share = await Share.findById(shareId);
       const token = authorization.split(" ")[1];
       const userId = await authMethod.getUserIdFromJwt(token);
       const user = await getUserWithRole(userId);
@@ -73,21 +79,21 @@ class LikePostController {
           .status(404)
           .json({ success: false, message: "User not found" });
       }
-      if (!post) {
+      if (!share) {
         return res
           .status(404)
-          .json({ success: false, message: "Post not found" });
+          .json({ success: false, message: "Share not found" });
       }
 
-      console.log(post);
+      console.log(share);
       console.log(user);
 
       // Kiểm tra xem user đã like bài viết này chưa
-      const existingLike = await Like.findOne({ user: userId, post: postId });
+      const existingLike = await Like.findOne({ user: userId, share: shareId });
       console.log("existingLike", existingLike);
 
       if (existingLike) {
-        await Like.findOneAndDelete({ user: userId, post: postId });
+        await Like.findOneAndDelete({ user: userId, share: shareId });
 
         return res
           .status(200)
@@ -95,18 +101,18 @@ class LikePostController {
       }
 
       // Tạo like mới và thêm vào bảng Like và trường likes của bài viết
-      const newLike = new Like({ user: userId, post: postId });
+      const newLike = new Like({ user: userId, share: shareId });
       await newLike.save();
-      post.likes.push(newLike._id);
-      const formattedLikePost = new LikePostResponse({
+      share.likes.push(newLike._id);
+      const formattedLikePost = new LikeShareResponse({
         likeId: newLike._id,
-        postId: post._id,
+        shareId: share._id,
         userName: user.userName,
       });
-      await post.save();
+      await share.save();
       return res.status(200).json({
         success: true,
-        message: "Like post successfully",
+        message: "Like share successfully",
         result: formattedLikePost,
         statusCode: 200,
       });
@@ -118,12 +124,12 @@ class LikePostController {
     }
   }
 
-  // Kiểm tra xem user đã like bài viết này chưa
-  async checkUserLikePost(req, res, next) {
+  // Kiểm tra xem user đã like bài share này chưa
+  async checkUserLikeShare(req, res, next) {
     try {
       const { authorization } = req.headers;
-      const { postId } = req.params;
-      const post = await Post.findById(postId);
+      const { shareId } = req.params;
+      const share = await Share.findById(shareId);
       const token = authorization.split(" ")[1];
       const userId = await authMethod.getUserIdFromJwt(token);
       const user = await getUserWithRole(userId);
@@ -133,17 +139,17 @@ class LikePostController {
           .status(404)
           .json({ success: false, message: "User not found" });
       }
-      if (!post) {
+      if (!share) {
         return res
           .status(404)
-          .json({ success: false, message: "Post not found" });
+          .json({ success: false, message: "Share not found" });
       }
 
-      console.log(post);
+      console.log(share);
       console.log(user);
 
       // Kiểm tra xem user đã like bài viết này chưa
-      const existingLike = await Like.findOne({ user: userId, post: postId });
+      const existingLike = await Like.findOne({ user: userId, share: shareId });
       console.log("existingLike", existingLike);
 
       if (existingLike) {
@@ -170,4 +176,4 @@ class LikePostController {
   }
 }
 
-module.exports = new LikePostController();
+module.exports = new LikeShareController();

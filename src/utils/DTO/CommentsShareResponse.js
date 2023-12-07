@@ -1,11 +1,11 @@
-class CommentsResponse {
+class CommentsShareResponse {
   constructor(comment) {
     this.commentId = comment.commentId;
     this.content = comment.content || null;
     this.createTime = comment.createTime;
     this.photos = comment.photos || null;
     this.userName = comment.userName || null;
-    this.postId = comment.postId;
+    this.shareId = comment.shareId;
     this.userAvatar = comment.userAvatar || null;
     this.userId = comment.userId || null;
     this.likes = comment.likes || [];
@@ -13,4 +13,4 @@ class CommentsResponse {
   }
 }
 
-module.exports = CommentsResponse;
+module.exports = CommentsShareResponse;
