@@ -6,6 +6,9 @@ const PostController = require("../app/controllers/User/PostController");
 // Lấy những bài viết của user theo id
 router.get("/user/:userId", PostController.getPostsByUserId);
 
+// Lấy những bài viết của user and friend theo id
+router.get("/get/timeLine", PostController.getPostsOfUserAndFriends);
+
 // Lấy thông tin chi tiết của 1 bài viết
 router.get("/:postId", PostController.getPostDetailsByPostId);
 

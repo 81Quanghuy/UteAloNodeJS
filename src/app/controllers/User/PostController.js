@@ -3,7 +3,8 @@ const { log } = require("console");
 const mongoose = require("mongoose");
 const Post = require("../../models/Post");
 const Profile = require("../../models/Profile");
-const User = require("../../models/User");
+const Friend = require("../../models/Friend");
+const { User } = require("../../models/User");
 const PostsResponse = require("../../../utils/DTO/PostsResponse");
 const authMethod = require("../../../auth/auth.method");
 const { getUserWithRole } = require("../../../utils/Populate/User");
@@ -108,6 +109,104 @@ class PostController {
       });
     } catch (error) {
       handleInternalServerError(req, res, error);
+    }
+  }
+
+  // Lấy những bài viết của user and friend theo id
+  async getPostsOfUserAndFriends(req, res, next) {
+    const { authorization } = req.headers;
+    // eslint-disable-next-line no-useless-catch
+    try {
+      const token = authorization.split(" ")[1];
+      const userId = await authMethod.getUserIdFromJwt(token);
+      // Lấy danh sách bạn bè của người dùng
+      const user = await User.findById(userId).populate(
+        "friend",
+        "user1 user2"
+      );
+
+      console.log("user", user);
+
+      // Lấy danh sách bạn bè của người dùng từ model Friend
+      const userFriends = await Friend.find({
+        $or: [{ user1: userId }, { user2: userId }],
+        status: true, // Chỉ lấy bạn bè có trạng thái là true
+      });
+
+      // Tạo một mảng chứa danh sách userIds của bạn bè
+      const friendUserIds = userFriends.map((friend) =>
+        friend.user1.toString() !== userId ? friend.user1 : friend.user2
+      );
+
+      // Thêm userId của người dùng vào danh sách để lấy cả bài viết của chính mình
+      friendUserIds.push(userId);
+
+      // Lấy bài viết của người dùng và bạn bè của họ
+      const posts = await Post.find({ userId: { $in: friendUserIds } })
+        .populate({
+          path: "userId",
+          select: "userName role",
+          populate: [
+            {
+              path: "role",
+              model: "Role",
+              select: "roleName",
+            },
+          ],
+        })
+        .populate("postGroupId", "postGroupName")
+        .populate("likes", "_id")
+        .populate("comments", "_id")
+        .sort({ postTime: -1 });
+
+      // Khởi tạo mảng formattedPosts trước vòng lặp
+      const formattedPosts = [];
+
+      for (const post of posts) {
+        // Truy vấn thông tin profile cho mỗi bài đăng
+        const profile = await Profile.findOne({ user: post.userId }).exec();
+
+        // Xử lý thông tin của từng bài đăng
+        const likeIds = post.likes?.map((like) => like._id) || [];
+        const commentIds = post.comments?.map((comment) => comment._id) || [];
+        const roleNameP = post.userId.role ? post.userId.role.roleName : null;
+        const avatar = profile ? profile.avatar : null;
+
+        // Tạo đối tượng mới cho từng bài đăng và đẩy vào mảng formattedPosts
+        const formattedPost = new PostsResponse({
+          postId: post._id,
+          postTime: post.postTime,
+          updateAt: post.updateAt,
+          content: post.content,
+          photos: post.photos,
+          files: post.files,
+          location: post.location,
+          userId: post.userId._id,
+          userName: post.userId.userName,
+          postGroupId: post.postGroupId,
+          postGroupName: post.postGroupId
+            ? post.postGroupId.postGroupName
+            : null,
+          comments: commentIds,
+          likes: likeIds,
+          roleName: roleNameP,
+          privacyLevel: post.privacyLevel,
+          avatarUser: avatar,
+        });
+
+        formattedPosts.push(formattedPost);
+      }
+
+      // Xử lý và định dạng bài viết như bạn đã làm trong hàm getPostsByUserId
+      return res.status(200).json({
+        success: true,
+        message: "Retrieved user posts successfully and access update",
+        result: formattedPosts,
+        statusCode: 200,
+      });
+    } catch (error) {
+      // Xử lý lỗi nếu có
+      throw error;
     }
   }
 

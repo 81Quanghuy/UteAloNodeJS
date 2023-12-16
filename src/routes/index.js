@@ -12,6 +12,7 @@ const Share = require("./shares");
 const LikePost = require("./likesPost");
 const LikeShare = require("./likesShare");
 const LikeComment = require("./likesComment");
+const Friend = require("./friends");
 
 const logEvents = require("../Helpers/logEvents");
 const bot = require("../utils/SlackLogger/bot");
@@ -60,6 +61,7 @@ function route(app) {
   app.use("/api/v1/share/like", LikeShare);
   app.use("/api/v1/comment/like", LikeComment);
   app.use("/api/v1/user", User);
+  app.use("/api/v1/friend", Friend);
 
   // app.use('/reports', Report);
   // app.use('/hobbies', Hobby);

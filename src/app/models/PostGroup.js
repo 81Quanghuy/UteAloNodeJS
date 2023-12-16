@@ -5,11 +5,6 @@ const mongoosePaginate = require("mongoose-paginate-v2");
 const { Schema } = mongoose;
 
 const PostGroupSchema = new Schema({
-  user: {
-    type: Schema.Types.ObjectId,
-    required: true,
-    ref: "user",
-  },
   postGroupName: {
     type: String,
     required: true,
@@ -39,13 +34,6 @@ const PostGroupSchema = new Schema({
     type: Boolean,
     default: false,
   },
-  postGroupMember: [
-    {
-      type: Schema.Types.ObjectId,
-      required: true,
-      ref: "postGroupMember",
-    },
-  ],
 });
 // soft delete
 PostGroupSchema.plugin(mongooseDelete, {

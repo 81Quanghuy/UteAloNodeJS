@@ -2,34 +2,34 @@ const mongoose = require("mongoose");
 const mongooseDelete = require("mongoose-delete");
 const mongoosePaginate = require("mongoose-paginate-v2");
 
-const FriendRequestSchema = new mongoose.Schema(
+const FriendSchema = new mongoose.Schema(
   {
-    userFrom: {
+    user1: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
-    userTo: {
+    user2: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
-    isActive: {
+    status: {
       type: Boolean,
       default: false,
     },
   },
   {
     timestamps: true,
-    collection: "friendRequest",
+    collection: "friends",
   }
 );
 
 // soft delete
-FriendRequestSchema.plugin(mongooseDelete, {
+FriendSchema.plugin(mongooseDelete, {
   deletedAt: true,
   overrideMethods: "all",
 });
 
 // paginate
-FriendRequestSchema.plugin(mongoosePaginate);
+FriendSchema.plugin(mongoosePaginate);
 
-module.exports = mongoose.model("FriendRequest", FriendRequestSchema);
+module.exports = mongoose.model("Friend", FriendSchema);

@@ -18,6 +18,7 @@ const Profile = require("../models/Profile");
 const PostGroup = require("../models/PostGroup");
 const RefreshToken = require("../models/RefreshToken");
 const PostGroupMember = require("../models/PostGroupMember");
+const PostGroupPostGroupMember = require("../models/PostGroupPostGroupMember");
 const { responseError } = require("../../utils/Response/error");
 const speakeasy = require("speakeasy");
 const Role = require("../models/Role");
@@ -239,18 +240,29 @@ class AuthoController {
         user: newUser,
       }).save();
 
-      if (roleId.roleName === "SinhVien") {
+      console.log("newUser", newUser);
+
+      const role = await Role.findOne({ roleName: req.body.roleName }).select(
+        "roleName"
+      );
+
+      if (role.roleName === "SinhVien") {
         const postGroup = await PostGroup.findOne({
           postGroupName: req.body.groupName,
         });
+        console.log("postGroup", postGroup);
         const newPostGroupMember = new PostGroupMember({
           user: newUser,
           roleUserGroup: "Member",
         });
-        newPostGroupMember.postGroup.push(postGroup._id);
-        postGroup.postGroupMember.push(newPostGroupMember._id);
-        await postGroup.save();
+        console.log("newPostGroupMember", newPostGroupMember);
+        const newPostGroupPostGroupMember = new PostGroupPostGroupMember({
+          postGroup: postGroup._id,
+          postGroupMember: newPostGroupMember._id,
+        });
+        console.log("newPostGroupPostGroupMember", newPostGroupPostGroupMember);
         await newPostGroupMember.save();
+        await newPostGroupPostGroupMember.save();
       }
 
       return res.status(200).json({
